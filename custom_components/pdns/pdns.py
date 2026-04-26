@@ -46,7 +46,9 @@ class PDNS:
         self.ttl = ttl
         self.session = session if session else ClientSession()
         self._key_name = dns.name.from_text(username)
-        self._keyring = dns.tsigkeyring.from_text({username: password})
+        # TSIG keys from BIND/PowerDNS often lack base64 padding
+        padded_secret = password + "=" * (-len(password) % 4)
+        self._keyring = dns.tsigkeyring.from_text({username: padded_secret})
 
     async def async_update(self) -> dict[str, Any]:
         """Update DNS record via RFC 2136 dynamic update with TSIG."""

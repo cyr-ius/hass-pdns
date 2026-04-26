@@ -11,7 +11,16 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .const import CONF_ALIAS, CONF_PDNSSRV, DOMAIN
+from .const import (
+    CONF_ALIAS,
+    CONF_DNS_ZONE,
+    CONF_PDNSSRV,
+    CONF_TSIG_ALGORITHM,
+    CONF_TTL,
+    DEFAULT_ALGORITHM,
+    DEFAULT_TTL,
+    DOMAIN,
+)
 from .pdns import PDNS, PDNSFailed
 
 _LOGGER = logging.getLogger(__name__)
@@ -28,11 +37,14 @@ class PDNSDataUpdateCoordinator(DataUpdateCoordinator):
             hass, _LOGGER, name=DOMAIN, update_interval=timedelta(seconds=SCAN_INTERVAL)
         )
         self.api = PDNS(
-            entry.data.get(CONF_PDNSSRV),
-            entry.data.get(CONF_ALIAS),
-            entry.data.get(CONF_USERNAME),
-            entry.data.get(CONF_PASSWORD),
-            async_create_clientsession(hass),
+            servername=entry.data.get(CONF_PDNSSRV),
+            zone=entry.data.get(CONF_DNS_ZONE),
+            alias=entry.data.get(CONF_ALIAS),
+            username=entry.data.get(CONF_USERNAME),
+            password=entry.data.get(CONF_PASSWORD),
+            algorithm=entry.data.get(CONF_TSIG_ALGORITHM, DEFAULT_ALGORITHM),
+            ttl=entry.data.get(CONF_TTL, DEFAULT_TTL),
+            session=async_create_clientsession(hass),
         )
 
     async def _async_update_data(self) -> dict[str, Any]:

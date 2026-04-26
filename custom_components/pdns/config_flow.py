@@ -9,20 +9,43 @@ from homeassistant import config_entries
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
+from homeassistant.helpers.selector import (
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
+)
 
+from .const import (
+    CONF_ALIAS,
+    CONF_DNS_ZONE,
+    CONF_PDNSSRV,
+    CONF_TSIG_ALGORITHM,
+    CONF_TTL,
+    DEFAULT_ALGORITHM,
+    DEFAULT_TTL,
+    DOMAIN,
+    TSIG_ALGORITHMS,
+)
 from .pdns import PDNS, CannotConnect, PDNSFailed, TimeoutExpired
-from .const import CONF_ALIAS, CONF_PDNSSRV, DOMAIN
+
+_LOGGER = logging.getLogger(__name__)
 
 DATA_SCHEMA = vol.Schema(
     {
+        vol.Required(CONF_PDNSSRV): cv.string,
+        vol.Required(CONF_DNS_ZONE): cv.string,
         vol.Required(CONF_ALIAS): cv.string,
         vol.Required(CONF_USERNAME): cv.string,
         vol.Required(CONF_PASSWORD): cv.string,
-        vol.Required(CONF_PDNSSRV): cv.string,
+        vol.Required(CONF_TSIG_ALGORITHM, default=DEFAULT_ALGORITHM): SelectSelector(
+            SelectSelectorConfig(
+                options=TSIG_ALGORITHMS,
+                mode=SelectSelectorMode.DROPDOWN,
+            )
+        ),
+        vol.Optional(CONF_TTL, default=DEFAULT_TTL): cv.positive_int,
     }
 )
-
-_LOGGER = logging.getLogger(__name__)
 
 
 class PDNSFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
@@ -40,13 +63,16 @@ class PDNSFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                     {
                         CONF_PDNSSRV: user_input[CONF_PDNSSRV],
                         CONF_ALIAS: user_input[CONF_ALIAS],
-                    },
+                    }
                 )
                 client = PDNS(
                     servername=user_input[CONF_PDNSSRV],
+                    zone=user_input[CONF_DNS_ZONE],
                     alias=user_input[CONF_ALIAS],
                     username=user_input[CONF_USERNAME],
                     password=user_input[CONF_PASSWORD],
+                    algorithm=user_input[CONF_TSIG_ALGORITHM],
+                    ttl=user_input[CONF_TTL],
                     session=async_create_clientsession(self.hass),
                 )
                 await client.async_update()
@@ -58,7 +84,8 @@ class PDNSFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 errors["base"] = err.args[0]
             else:
                 return self.async_create_entry(
-                    title=f"PowerDNS ({user_input[CONF_ALIAS]})", data=user_input
+                    title=f"PowerDNS ({user_input[CONF_ALIAS]})",
+                    data=user_input,
                 )
 
         return self.async_show_form(

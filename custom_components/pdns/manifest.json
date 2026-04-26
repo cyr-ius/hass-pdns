@@ -7,5 +7,6 @@
   "integration_type": "hub",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/Cyr-ius/hass-pdns/issues",
-  "version": "2.4.3"
+  "requirements": ["dnspython>=2.0.0"],
+  "version": "2.5.0"
 }

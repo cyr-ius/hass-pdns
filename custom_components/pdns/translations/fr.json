@@ -3,28 +3,24 @@
     "title": "PowerDNS Dynhost",
     "step": {
       "user": {
-        "title": "Ajout d'un ddns",
-        "description": "Détection automatique de l'adresse ip publique",
+        "title": "Mise à jour DNS dynamique (TSIG)",
         "data": {
-          "username": "Utilisateur",
-          "password": "Mot de passe",
-          "dns_alias": "Alias DNS",
-          "pdns_server": "Serveur",
-          "ip_address": "Activer IPv6"
+          "pdns_server": "Serveur DNS (IP ou nom d'hôte)",
+          "dns_zone": "Zone DNS (ex. example.com)",
+          "dns_alias": "Alias DNS (FQDN, ex. home.example.com)",
+          "username": "Nom de la clé TSIG",
+          "password": "Secret de la clé TSIG (base64)",
+          "tsig_algorithm": "Algorithme",
+          "ttl": "TTL (secondes)"
         }
       }
     },
     "error": {
-      "update_failed": "Mise à jour en erreur failed.",
-      "login_incorrect": "Impossible de se connecter.",
+      "update_failed": "Mise à jour en erreur.",
+      "login_incorrect": "Impossible de se connecter ou authentification TSIG échouée.",
       "timeout": "Timeout dépassé.",
-      "unknown": "Erreur inconnu.",
-      "nohost": "Le nom spécifié n'existe pas pour ce compte",
-      "badauth": "Utilisateur ou mot de passe incorrect",
-      "badagent": "Client désactivé",
-      "!donator": "LA mise à jour a été réalisé avec une fonctionnalité non disponible",
-      "abuse": "Compte bloqué pour abus",
-      "detect_failed": "Impossible de déterminer l'adresse ip publique."
+      "unknown": "Erreur inconnue.",
+      "detect_failed": "Impossible de déterminer l'adresse IP publique."
     },
     "abort": {
       "already_configured": "Service déjà configuré"

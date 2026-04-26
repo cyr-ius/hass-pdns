@@ -3,28 +3,24 @@
     "title": "PowerDNS Dynhost",
     "step": {
       "user": {
-        "title": "Add dynamic dns domain",
-        "description": "Automatic detection of the public ip address if the field is empty",
+        "title": "DNS Dynamic Update (TSIG)",
         "data": {
-          "username": "Username",
-          "password": "Password",
-          "dns_alias": "DNS Alias",
-          "pdns_server": "Server",
-          "ip_address": "Enable IPv6"
+          "pdns_server": "DNS Server (IP or hostname)",
+          "dns_zone": "DNS Zone (e.g. example.com)",
+          "dns_alias": "DNS Alias (FQDN, e.g. home.example.com)",
+          "username": "TSIG Key Name",
+          "password": "TSIG Key Secret (base64)",
+          "tsig_algorithm": "Algorithm",
+          "ttl": "TTL (seconds)"
         }
       }
     },
     "error": {
       "update_failed": "Update failed.",
-      "login_incorrect": "Can't connect to API.",
-      "timeout": "Timeout from API for domain.",
-      "unknown": "unknown error.",
-      "nohost": "Hostname supplied does not exist under specified account",
-      "badauth": "Invalid username password combination",
-      "badagent": "Client disabled",
-      "!donator": "An update request was sent with a feature that is not available",
-      "abuse": "Username is blocked due to abuse",
-      "detect_failed": "Unable to determine public ip address."
+      "login_incorrect": "Cannot connect to server or TSIG authentication failed.",
+      "timeout": "Connection timeout.",
+      "unknown": "Unknown error.",
+      "detect_failed": "Unable to determine public IP address."
     },
     "abort": {
       "already_configured": "Service is already configured"

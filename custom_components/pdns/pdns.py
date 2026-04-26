@@ -7,75 +7,94 @@ import logging
 from datetime import datetime
 from typing import Any
 
-from aiohttp import BasicAuth, ClientError, ClientSession
+import dns.exception
+import dns.name
+import dns.query
+import dns.rcode
+import dns.tsigkeyring
+import dns.update
+from aiohttp import ClientError, ClientSession
 
 MYIP_CHECK = "https://v4.ident.me/"
-PDNS_ERRORS = {
-    "nohost": "Hostname supplied does not exist under specified account",
-    "badauth": "Invalid username password combination",
-    "badagent": "Client disabled",
-    "!donator": "An update request was sent with a feature that is not available",
-    "abuse": "Username is blocked due to abuse",
-}
 
 _LOGGER = logging.getLogger(__name__)
 
 
 class PDNS:
-    """Powerdns class."""
+    """PowerDNS update via DNS Dynamic Update (RFC 2136) with TSIG authentication.
+
+    username = TSIG key name
+    password = TSIG key secret (base64)
+    """
 
     def __init__(
         self,
         servername: str,
+        zone: str,
         alias: str,
         username: str,
         password: str,
+        algorithm: str = "hmac-sha256",
+        ttl: int = 300,
         session: ClientSession = None,
     ) -> None:
         """Initialize."""
-        self.url = f"https://{servername}/nic/update"
-        self.alias = alias
+        self.server = servername
+        self.zone = zone if zone.endswith(".") else f"{zone}."
+        self.alias = alias if alias.endswith(".") else f"{alias}."
+        self.algorithm = algorithm
+        self.ttl = ttl
         self.session = session if session else ClientSession()
-        self.authentication = BasicAuth(username, password)
+        self._key_name = dns.name.from_text(username)
+        self._keyring = dns.tsigkeyring.from_text({username: password})
 
     async def async_update(self) -> dict[str, Any]:
-        """Update Alias to Power DNS."""
-        try:
-            public_ip = await self._async_get_public_ip()
-            params = {"myip": public_ip, "hostname": self.alias}
-            response = await self.session.get(
-                self.url, params=params, auth=self.authentication
-            )
-            if response.status != 200:
-                raise CannotConnect(f"Can't connect to API ({response.status})")
-            body = await response.text()
-            if body.startswith("good") or body.startswith("nochg"):
-                state = body.strip()
-                _LOGGER.debug("State: %s", state)
-                return {
-                    "state": state,
-                    "public_ip": public_ip,
-                    "last_seen": datetime.now(),
-                }
-            raise CannotConnect(f"Can't connect to API ({body})")
-        except ClientError as error:
-            raise CannotConnect(error) from error
-        except asyncio.TimeoutError as error:
-            raise TimeoutExpired(f"API Timeout from {self.alias}") from error
+        """Update DNS record via RFC 2136 dynamic update with TSIG."""
+        public_ip = await self._async_get_public_ip()
+        await asyncio.get_running_loop().run_in_executor(
+            None, self._do_dns_update, public_ip
+        )
+        _LOGGER.debug("TSIG update successful: %s -> %s", self.alias, public_ip)
+        return {
+            "state": f"good {public_ip}",
+            "public_ip": public_ip,
+            "last_seen": datetime.now(),
+        }
 
     async def _async_get_public_ip(self) -> str:
-        """Get Public ip address."""
+        """Get public IP address."""
         try:
             response = await self.session.get(MYIP_CHECK)
             if response.status != 200:
                 raise CannotConnect(f"Can't fetch public ip ({response.status})")
             public_ip = await response.text()
-            _LOGGER.debug("Public Ip: %s", public_ip)
+            _LOGGER.debug("Public IP: %s", public_ip)
             return public_ip
         except asyncio.TimeoutError as error:
             raise TimeoutExpired("Timeout to get public ip address") from error
-        except Exception as error:
+        except ClientError as error:
             raise DetectionFailed(str(error)) from error
+
+    def _do_dns_update(self, ip: str) -> None:
+        """Perform synchronous DNS dynamic update (runs in executor)."""
+        try:
+            update = dns.update.Update(
+                self.zone,
+                keyring=self._keyring,
+                keyname=self._key_name,
+                keyalgorithm=self.algorithm,
+            )
+            update.replace(self.alias, self.ttl, "A", ip)
+            response = dns.query.udp(update, self.server, timeout=10)
+            rcode = response.rcode()
+            if rcode != dns.rcode.NOERROR:
+                raise CannotConnect(f"DNS update failed: {dns.rcode.to_text(rcode)}")
+        except dns.exception.Timeout as error:
+            raise TimeoutExpired(f"DNS update timeout for {self.alias}") from error
+        except dns.exception.DNSException as error:
+            raise CannotConnect(str(error)) from error
+        except OSError as error:
+            raise CannotConnect(str(error)) from error
 
 
 class PDNSFailed(Exception):
@@ -83,7 +102,7 @@ class PDNSFailed(Exception):
 
 
 class DetectionFailed(PDNSFailed):
-    """Error to indicate there is invalid retrieve public ip address."""
+    """Error to indicate public IP retrieval failed."""
 
 
 class CannotConnect(PDNSFailed):
@@ -91,4 +110,4 @@ class CannotConnect(PDNSFailed):
 
 
 class TimeoutExpired(PDNSFailed):
-    """Error to indicate there is invalid auth."""
+    """Error to indicate a timeout occurred."""

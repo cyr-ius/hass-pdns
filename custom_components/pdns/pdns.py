@@ -4,15 +4,15 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import socket
 from datetime import datetime
 from typing import Any
-
-import socket
 
 import dns.exception
 import dns.name
 import dns.query
 import dns.rcode
+import dns.resolver
 import dns.tsigkeyring
 import dns.update
 from aiohttp import ClientError, ClientSession
@@ -55,12 +55,15 @@ class PDNS:
     async def async_update(self) -> dict[str, Any]:
         """Update DNS record via RFC 2136 dynamic update with TSIG."""
         public_ip = await self._async_get_public_ip()
-        await asyncio.get_running_loop().run_in_executor(
+        updated = await asyncio.get_running_loop().run_in_executor(
             None, self._do_dns_update, public_ip
         )
-        _LOGGER.debug("TSIG update successful: %s -> %s (zone: %s)", self.alias, public_ip, self.zone)
+        if updated:
+            _LOGGER.debug("TSIG update: %s -> %s (zone: %s)", self.alias, public_ip, self.zone)
+        else:
+            _LOGGER.debug("TSIG no change: %s already points to %s", self.alias, public_ip)
         return {
-            "state": f"good {public_ip}",
+            "state": f"good {public_ip}" if updated else f"nochg {public_ip}",
             "public_ip": public_ip,
             "last_seen": datetime.now(),
         }
@@ -79,10 +82,21 @@ class PDNS:
         except ClientError as error:
             raise DetectionFailed(str(error)) from error
 
-    def _do_dns_update(self, ip: str) -> None:
-        """Perform synchronous DNS dynamic update (runs in executor)."""
+    def _do_dns_update(self, ip: str) -> bool:
+        """Check current record and update only if needed. Returns True if updated."""
         try:
             server_ip = socket.gethostbyname(self.server)
+
+            # Query the authoritative server directly to avoid cache
+            try:
+                resolver = dns.resolver.Resolver(configure=False)
+                resolver.nameservers = [server_ip]
+                answers = resolver.resolve(self.alias, "A")
+                if {rdata.address for rdata in answers} == {ip}:
+                    return False
+            except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer, dns.exception.DNSException):
+                pass  # record missing or unresolvable — proceed with update
+
             update = dns.update.Update(
                 self.zone,
                 keyring=self._keyring,
@@ -94,6 +108,7 @@ class PDNS:
             rcode = response.rcode()
             if rcode != dns.rcode.NOERROR:
                 raise CannotConnect(f"DNS update failed: {dns.rcode.to_text(rcode)}")
+            return True
         except dns.exception.Timeout as error:
             raise TimeoutExpired(f"DNS update timeout for {self.alias}") from error
         except dns.exception.DNSException as error:

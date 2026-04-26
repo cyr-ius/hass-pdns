@@ -7,6 +7,8 @@ import logging
 from datetime import datetime
 from typing import Any
 
+import socket
+
 import dns.exception
 import dns.name
 import dns.query
@@ -80,6 +82,7 @@ class PDNS:
     def _do_dns_update(self, ip: str) -> None:
         """Perform synchronous DNS dynamic update (runs in executor)."""
         try:
+            server_ip = socket.gethostbyname(self.server)
             update = dns.update.Update(
                 self.zone,
                 keyring=self._keyring,
@@ -87,7 +90,7 @@ class PDNS:
                 keyalgorithm=self.algorithm,
             )
             update.replace(self.alias, self.ttl, "A", ip)
-            response = dns.query.udp(update, self.server, timeout=10)
+            response = dns.query.udp(update, server_ip, timeout=10)
             rcode = response.rcode()
             if rcode != dns.rcode.NOERROR:
                 raise CannotConnect(f"DNS update failed: {dns.rcode.to_text(rcode)}")

@@ -6,7 +6,6 @@
         "title": "DNS Dynamic Update (TSIG)",
         "data": {
           "pdns_server": "DNS Server (IP or hostname)",
-          "dns_zone": "DNS Zone (e.g. example.com)",
           "dns_alias": "DNS Alias (FQDN, e.g. home.example.com)",
           "username": "TSIG Key Name",
           "password": "TSIG Key Secret (base64)",

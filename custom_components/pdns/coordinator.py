@@ -13,7 +13,6 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 from .const import (
     CONF_ALIAS,
-    CONF_DNS_ZONE,
     CONF_PDNSSRV,
     CONF_TSIG_ALGORITHM,
     CONF_TTL,
@@ -38,7 +37,6 @@ class PDNSDataUpdateCoordinator(DataUpdateCoordinator):
         )
         self.api = PDNS(
             servername=entry.data.get(CONF_PDNSSRV),
-            zone=entry.data.get(CONF_DNS_ZONE),
             alias=entry.data.get(CONF_ALIAS),
             username=entry.data.get(CONF_USERNAME),
             password=entry.data.get(CONF_PASSWORD),

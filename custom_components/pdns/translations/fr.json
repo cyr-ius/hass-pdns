@@ -6,7 +6,6 @@
         "title": "Mise à jour DNS dynamique (TSIG)",
         "data": {
           "pdns_server": "Serveur DNS (IP ou nom d'hôte)",
-          "dns_zone": "Zone DNS (ex. example.com)",
           "dns_alias": "Alias DNS (FQDN, ex. home.example.com)",
           "username": "Nom de la clé TSIG",
           "password": "Secret de la clé TSIG (base64)",

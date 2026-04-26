@@ -30,7 +30,6 @@ class PDNS:
     def __init__(
         self,
         servername: str,
-        zone: str,
         alias: str,
         username: str,
         password: str,
@@ -40,8 +39,9 @@ class PDNS:
     ) -> None:
         """Initialize."""
         self.server = servername
-        self.zone = zone if zone.endswith(".") else f"{zone}."
-        self.alias = alias if alias.endswith(".") else f"{alias}."
+        alias_name = dns.name.from_text(alias)
+        self.alias = alias_name
+        self.zone = alias_name.parent()
         self.algorithm = algorithm
         self.ttl = ttl
         self.session = session if session else ClientSession()
@@ -54,7 +54,7 @@ class PDNS:
         await asyncio.get_running_loop().run_in_executor(
             None, self._do_dns_update, public_ip
         )
-        _LOGGER.debug("TSIG update successful: %s -> %s", self.alias, public_ip)
+        _LOGGER.debug("TSIG update successful: %s -> %s (zone: %s)", self.alias, public_ip, self.zone)
         return {
             "state": f"good {public_ip}",
             "public_ip": public_ip,

@@ -17,7 +17,6 @@ from homeassistant.helpers.selector import (
 
 from .const import (
     CONF_ALIAS,
-    CONF_DNS_ZONE,
     CONF_PDNSSRV,
     CONF_TSIG_ALGORITHM,
     CONF_TTL,
@@ -33,7 +32,6 @@ _LOGGER = logging.getLogger(__name__)
 DATA_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_PDNSSRV): cv.string,
-        vol.Required(CONF_DNS_ZONE): cv.string,
         vol.Required(CONF_ALIAS): cv.string,
         vol.Required(CONF_USERNAME): cv.string,
         vol.Required(CONF_PASSWORD): cv.string,
@@ -67,7 +65,6 @@ class PDNSFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 )
                 client = PDNS(
                     servername=user_input[CONF_PDNSSRV],
-                    zone=user_input[CONF_DNS_ZONE],
                     alias=user_input[CONF_ALIAS],
                     username=user_input[CONF_USERNAME],
                     password=user_input[CONF_PASSWORD],

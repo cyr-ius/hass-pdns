@@ -1,6 +1,8 @@
 # PowerDNS DynHost Updater Component for Home Assistant
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/custom-components/hacs)
+![downloads](https://img.shields.io/badge/dynamic/json?color=41BDF5&logo=home-assistant&label=integration%20usage&suffix=%20installs&cacheSeconds=15600&url=https://analytics.home-assistant.io/custom_integrations.json&query=$.pdns.total)
+
 
 With the `pdns` integration you can keep your current IP address in sync with yourhostname or domain.
 

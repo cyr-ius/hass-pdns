@@ -35,7 +35,7 @@ class PDNS:
         password: str,
         algorithm: str = "hmac-sha256",
         ttl: int = 300,
-        session: ClientSession = None,
+        session: ClientSession | None = None,
     ) -> None:
         """Initialize."""
         self.server = servername

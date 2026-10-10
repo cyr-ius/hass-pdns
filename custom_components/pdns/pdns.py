@@ -1,7 +1,5 @@
 """PDNS Api."""
 
-from __future__ import annotations
-
 import asyncio
 import logging
 import socket
@@ -59,9 +57,13 @@ class PDNS:
             None, self._do_dns_update, public_ip
         )
         if updated:
-            _LOGGER.debug("TSIG update: %s -> %s (zone: %s)", self.alias, public_ip, self.zone)
+            _LOGGER.debug(
+                "TSIG update: %s -> %s (zone: %s)", self.alias, public_ip, self.zone
+            )
         else:
-            _LOGGER.debug("TSIG no change: %s already points to %s", self.alias, public_ip)
+            _LOGGER.debug(
+                "TSIG no change: %s already points to %s", self.alias, public_ip
+            )
         return {
             "state": f"good {public_ip}" if updated else f"nochg {public_ip}",
             "public_ip": public_ip,
@@ -77,7 +79,7 @@ class PDNS:
             public_ip = await response.text()
             _LOGGER.debug("Public IP: %s", public_ip)
             return public_ip
-        except asyncio.TimeoutError as error:
+        except TimeoutError as error:
             raise TimeoutExpired("Timeout to get public ip address") from error
         except ClientError as error:
             raise DetectionFailed(str(error)) from error
@@ -94,7 +96,11 @@ class PDNS:
                 answers = resolver.resolve(self.alias, "A")
                 if {rdata.address for rdata in answers} == {ip}:
                     return False
-            except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer, dns.exception.DNSException):
+            except (
+                dns.resolver.NXDOMAIN,
+                dns.resolver.NoAnswer,
+                dns.exception.DNSException,
+            ):
                 pass  # record missing or unresolvable — proceed with update
 
             update = dns.update.Update(

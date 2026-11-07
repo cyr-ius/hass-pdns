@@ -6,7 +6,7 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_create_clientsession
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import (
     SelectSelector,
     SelectSelectorConfig,
@@ -23,7 +23,7 @@ from .const import (
     DOMAIN,
     TSIG_ALGORITHMS,
 )
-from .pdns import PDNS, CannotConnect, PDNSFailed, TimeoutExpired
+from .pdns import PDNS, CannotConnect, DetectionFailed, PDNSFailed, TimeoutExpired
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -67,15 +67,17 @@ class PDNSFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                     password=user_input[CONF_PASSWORD],
                     algorithm=user_input[CONF_TSIG_ALGORITHM],
                     ttl=user_input[CONF_TTL],
-                    session=async_create_clientsession(self.hass),
+                    session=async_get_clientsession(self.hass),
                 )
                 await client.async_update()
             except CannotConnect:
                 errors["base"] = "login_incorrect"
             except TimeoutExpired:
                 errors["base"] = "timeout"
-            except PDNSFailed as err:
-                errors["base"] = err.args[0]
+            except DetectionFailed:
+                errors["base"] = "detect_failed"
+            except PDNSFailed:
+                errors["base"] = "update_failed"
             else:
                 return self.async_create_entry(
                     title=f"PowerDNS ({user_input[CONF_ALIAS]})",

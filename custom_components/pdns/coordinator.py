@@ -7,7 +7,7 @@ from typing import Any
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_create_clientsession
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
@@ -18,6 +18,7 @@ from .const import (
     DEFAULT_ALGORITHM,
     DEFAULT_TTL,
     DOMAIN,
+    TSIG_ALGORITHMS,
 )
 from .pdns import PDNS, PDNSFailed
 
@@ -41,8 +42,15 @@ class PDNSDataUpdateCoordinator(DataUpdateCoordinator):
             password=entry.data.get(CONF_PASSWORD),
             algorithm=entry.data.get(CONF_TSIG_ALGORITHM, DEFAULT_ALGORITHM),
             ttl=entry.data.get(CONF_TTL, DEFAULT_TTL),
-            session=async_create_clientsession(hass),
+            session=async_get_clientsession(hass),
         )
+        if self.api.algorithm not in TSIG_ALGORITHMS:
+            _LOGGER.warning(
+                "TSIG algorithm %s is deprecated (RFC 8945), "
+                "please reconfigure %s with hmac-sha256 or stronger",
+                self.api.algorithm,
+                entry.title,
+            )
 
     async def _async_update_data(self) -> dict[str, Any]:
         try:

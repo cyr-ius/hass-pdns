@@ -12,8 +12,6 @@ TSIG_ALGORITHMS = [
     "hmac-sha512",
     "hmac-sha384",
     "hmac-sha224",
-    "hmac-sha1",
-    "hmac-md5",
 ]
 DEFAULT_TTL = 300
 DEFAULT_ALGORITHM = "hmac-sha256"

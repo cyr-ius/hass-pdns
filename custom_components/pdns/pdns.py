@@ -1,6 +1,7 @@
 """PDNS Api."""
 
 import asyncio
+import ipaddress
 import logging
 import socket
 from datetime import datetime
@@ -13,9 +14,11 @@ import dns.rcode
 import dns.resolver
 import dns.tsigkeyring
 import dns.update
-from aiohttp import ClientError, ClientSession
+from aiohttp import ClientError, ClientSession, ClientTimeout
 
 MYIP_CHECK = "https://v4.ident.me/"
+MYIP_TIMEOUT = ClientTimeout(total=10)
+MYIP_MAX_BYTES = 64
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -71,18 +74,31 @@ class PDNS:
         }
 
     async def _async_get_public_ip(self) -> str:
-        """Get public IP address."""
+        """Get and validate the public IPv4 address."""
         try:
-            response = await self.session.get(MYIP_CHECK)
-            if response.status != 200:
-                raise CannotConnect(f"Can't fetch public ip ({response.status})")
-            public_ip = await response.text()
-            _LOGGER.debug("Public IP: %s", public_ip)
-            return public_ip
+            async with self.session.get(MYIP_CHECK, timeout=MYIP_TIMEOUT) as response:
+                if response.status != 200:
+                    raise DetectionFailed(f"Can't fetch public ip ({response.status})")
+                raw = b""
+                while chunk := await response.content.read(MYIP_MAX_BYTES):
+                    raw += chunk
+                    if len(raw) > MYIP_MAX_BYTES:
+                        raise DetectionFailed("Public IP response too large")
         except TimeoutError as error:
             raise TimeoutExpired("Timeout to get public ip address") from error
         except ClientError as error:
             raise DetectionFailed(str(error)) from error
+
+        try:
+            address = ipaddress.IPv4Address(raw.decode("ascii").strip())
+        except (UnicodeDecodeError, ValueError) as error:
+            raise DetectionFailed("Invalid public IP address received") from error
+        if not address.is_global:
+            raise DetectionFailed(f"Public IP address is not global: {address}")
+
+        public_ip = str(address)
+        _LOGGER.debug("Public IP: %s", public_ip)
+        return public_ip
 
     def _do_dns_update(self, ip: str) -> bool:
         """Check current record and update only if needed. Returns True if updated."""

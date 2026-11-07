@@ -13,7 +13,7 @@ packages = []
 [dependency-groups]
 lint = ["prek"]
 dev = [
-  "dnspython>=2.0.0",
+  "dnspython>=2.6.1",
   "homeassistant",
   {include-group = "lint"},
 ]

@@ -1086,7 +1086,7 @@ lint = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "dnspython", specifier = ">=2.0.0" },
+    { name = "dnspython", specifier = ">=2.6.1" },
     { name = "homeassistant" },
     { name = "prek" },
 ]

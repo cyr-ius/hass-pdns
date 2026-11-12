@@ -156,12 +156,18 @@ class PDNS:
         return public_ip
 
     def _resolve_server(self) -> str:
-        """Resolve the DNS server address (IPv4 or IPv6)."""
+        """Resolve the DNS server address, preferring IPv4.
+
+        IPv4 is preferred to keep the source address used before IPv6
+        support (PowerDNS allow-dnsupdate-from is often IPv4 only).
+        IPv6 is used only when the server has no IPv4 address.
+        """
         infos = socket.getaddrinfo(
             self.server, 53, type=socket.SOCK_DGRAM, proto=socket.IPPROTO_UDP
         )
         if not infos:
             raise CannotConnect(f"Unable to resolve {self.server}")
+        infos.sort(key=lambda info: info[0] != socket.AF_INET)
         return str(infos[0][4][0])
 
     def _do_dns_update(self, public_ips: dict[str, str]) -> set[str]:
@@ -198,7 +204,10 @@ class PDNS:
             response = dns.query.udp(update, server_ip, timeout=10)
             rcode = response.rcode()
             if rcode != dns.rcode.NOERROR:
-                raise CannotConnect(f"DNS update failed: {dns.rcode.to_text(rcode)}")
+                raise CannotConnect(
+                    f"DNS update of {', '.join(to_update)} for {self.alias} "
+                    f"refused by {server_ip}: {dns.rcode.to_text(rcode)}"
+                )
             return set(to_update)
         except dns.exception.Timeout as error:
             raise TimeoutExpired(f"DNS update timeout for {self.alias}") from error

@@ -65,7 +65,7 @@ class PDNS:
 
     def __init__(
         self,
-        servername: str,
+        servername: str | None,
         alias: str,
         username: str,
         password: str,
@@ -75,10 +75,12 @@ class PDNS:
         ip_version: str = IP_VERSION_V4,
     ) -> None:
         """Initialize."""
-        self.server = servername
+        # None or empty: the zone's primary server (SOA MNAME) is used
+        self.server = servername or None
         alias_name = dns.name.from_text(alias)
         self.alias = alias_name
-        self.zone = alias_name.parent()
+        # Detected on the server at each update (see _find_zone)
+        self.zone: dns.name.Name | None = None
         self.algorithm = algorithm
         self.ttl = ttl
         self.session = session if session else ClientSession()
@@ -178,11 +180,19 @@ class PDNS:
         support (PowerDNS allow-dnsupdate-from is often IPv4 only).
         IPv6 is used only when the server has no IPv4 address.
         """
-        infos = socket.getaddrinfo(
-            self.server, 53, type=socket.SOCK_DGRAM, proto=socket.IPPROTO_UDP
-        )
+        server = self.server or self._discover_server()
+        try:
+            infos = socket.getaddrinfo(
+                server, DNS_PORT, type=socket.SOCK_DGRAM, proto=socket.IPPROTO_UDP
+            )
+        except socket.gaierror as error:
+            if self.server:
+                raise CannotConnect(f"Unable to resolve {server}: {error}") from error
+            raise ServerNotFound(
+                f"Primary server {server} of the zone cannot be resolved"
+            ) from error
         if not infos:
-            raise CannotConnect(f"Unable to resolve {self.server}")
+            raise CannotConnect(f"Unable to resolve {server}")
         infos.sort(key=lambda info: info[0] != socket.AF_INET)
         return str(infos[0][4][0])
 
@@ -194,6 +204,8 @@ class PDNS:
             # Query the authoritative server directly to avoid cache
             resolver = dns.resolver.Resolver(configure=False)
             resolver.nameservers = [server_ip]
+            resolver.lifetime = DNS_TIMEOUT
+            self.zone = self._find_zone(resolver, server_ip)
 
             to_update: dict[str, str] = {}
             for rdtype, ip in public_ips.items():
@@ -222,7 +234,8 @@ class PDNS:
             if rcode != dns.rcode.NOERROR:
                 message = (
                     f"DNS update of {', '.join(to_update)} for {self.alias} "
-                    f"refused by {server_ip} (source {source_ip}): "
+                    f"refused by {server_ip} "
+                    f"(source {_describe_source(source_ip, public_ips)}): "
                     f"{dns.rcode.to_text(rcode)}"
                 )
                 if hint := RCODE_HINTS.get(rcode):
@@ -235,6 +248,43 @@ class PDNS:
             raise CannotConnect(str(error)) from error
         except OSError as error:
             raise CannotConnect(str(error)) from error
+
+    def _discover_server(self) -> str:
+        """Find the primary server of the alias zone (SOA MNAME, RFC 2136).
+
+        Uses the system resolver, since the server is not known yet.
+        """
+        resolver = dns.resolver.Resolver()
+        resolver.lifetime = DNS_TIMEOUT
+        try:
+            zone = dns.resolver.zone_for_name(self.alias, resolver=resolver)
+            # The root or a TLD means the alias domain does not exist
+            if len(zone.labels) <= 2:
+                raise ServerNotFound(f"No DNS zone found for {self.alias}")
+            mname = resolver.resolve(zone, "SOA")[0].mname
+        except dns.exception.Timeout:
+            raise
+        except dns.exception.DNSException as error:
+            raise ServerNotFound(
+                f"Unable to find the primary server of the zone of {self.alias}"
+            ) from error
+        server = mname.to_text(omit_final_dot=True)
+        _LOGGER.debug("Primary server of %s (zone %s): %s", self.alias, zone, server)
+        return server
+
+    def _find_zone(
+        self, resolver: dns.resolver.Resolver, server_ip: str
+    ) -> dns.name.Name:
+        """Ask the server which of its zones contains the alias (SOA lookup)."""
+        try:
+            zone = dns.resolver.zone_for_name(self.alias, resolver=resolver)
+        except (dns.resolver.NoNameservers, dns.resolver.NoRootSOA) as error:
+            # PowerDNS answers REFUSED for names outside its zones
+            raise ZoneNotFound(
+                f"No zone hosted by {server_ip} contains {self.alias}"
+            ) from error
+        _LOGGER.debug("Zone for %s on %s: %s", self.alias, server_ip, zone)
+        return zone
 
     @staticmethod
     def _send_update(
@@ -277,6 +327,20 @@ class PDNS:
                     return response, source_ip
 
 
+def _describe_source(source_ip: str, public_ips: dict[str, str]) -> str:
+    """Describe the update source address, as seen by the server.
+
+    Behind NAT the local address is private: the server sees the public one.
+    """
+    address = ipaddress.ip_address(source_ip)
+    if address.is_global:
+        return source_ip
+    public = public_ips.get("A" if address.version == 4 else "AAAA")
+    if public:
+        return f"{source_ip}, seen as {public} behind NAT"
+    return f"{source_ip}, seen as your public IPv{address.version} behind NAT"
+
+
 class PDNSFailed(Exception):
     """Error to indicate there is invalid pdns communication."""
 
@@ -287,6 +351,14 @@ class DetectionFailed(PDNSFailed):
 
 class CannotConnect(PDNSFailed):
     """Error to indicate we cannot connect."""
+
+
+class ServerNotFound(CannotConnect):
+    """Error to indicate the zone primary server could not be found."""
+
+
+class ZoneNotFound(CannotConnect):
+    """Error to indicate the server hosts no zone containing the alias."""
 
 
 class TimeoutExpired(PDNSFailed):

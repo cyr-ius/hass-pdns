@@ -38,7 +38,15 @@ from .const import (
     LEGACY_IP_VERSION,
     TSIG_ALGORITHMS,
 )
-from .pdns import PDNS, CannotConnect, DetectionFailed, PDNSFailed, TimeoutExpired
+from .pdns import (
+    PDNS,
+    CannotConnect,
+    DetectionFailed,
+    PDNSFailed,
+    ServerNotFound,
+    TimeoutExpired,
+    ZoneNotFound,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -52,7 +60,7 @@ IP_VERSION_SELECTOR = SelectSelector(
 
 DATA_SCHEMA = vol.Schema(
     {
-        vol.Required(CONF_PDNSSRV): cv.string,
+        vol.Optional(CONF_PDNSSRV): cv.string,
         vol.Required(CONF_ALIAS): cv.string,
         vol.Required(CONF_USERNAME): cv.string,
         vol.Required(CONF_PASSWORD): cv.string,
@@ -74,7 +82,7 @@ RECORD_IP_VERSION = {"A": IP_VERSION_V4, "AAAA": IP_VERSION_V6}
 def _build_client(hass: HomeAssistant, data: dict[str, Any], ip_version: str) -> PDNS:
     """Build a PDNS client from entry data."""
     return PDNS(
-        servername=data[CONF_PDNSSRV],
+        servername=data.get(CONF_PDNSSRV),
         alias=data[CONF_ALIAS],
         username=data[CONF_USERNAME],
         password=data[CONF_PASSWORD],
@@ -95,6 +103,10 @@ async def async_validate_update(
         _LOGGER.warning(
             "Validation of %s (%s) failed: %s", data[CONF_ALIAS], ip_version, error
         )
+        if isinstance(error, ServerNotFound):
+            return {"base": "server_not_found"}
+        if isinstance(error, ZoneNotFound):
+            return {"base": "zone_not_found"}
         if isinstance(error, CannotConnect):
             return {"base": "login_incorrect"}
         if isinstance(error, TimeoutExpired):
@@ -155,6 +167,15 @@ class DualStackCheckMixin:
             description_placeholders=placeholders,
         )
 
+    # Home Assistant requires a step method for each shown step_id
+    async def async_step_dual_success(self, user_input=None) -> ConfigFlowResult:
+        """Status menu when both families work (re-runs the check)."""
+        return await self.async_step_dual_check()
+
+    async def async_step_dual_partial(self, user_input=None) -> ConfigFlowResult:
+        """Status menu when one family fails (re-runs the check)."""
+        return await self.async_step_dual_check()
+
     async def async_step_confirm_dual(self, user_input=None) -> ConfigFlowResult:
         """Keep IPv4 + IPv6."""
         return self._async_finish(IP_VERSION_BOTH)
@@ -204,12 +225,7 @@ class PDNSFlowHandler(DualStackCheckMixin, ConfigFlow, domain=DOMAIN):
         if user_input is None:
             return self._async_show_main_form({})
 
-        self._async_abort_entries_match(
-            {
-                CONF_PDNSSRV: user_input[CONF_PDNSSRV],
-                CONF_ALIAS: user_input[CONF_ALIAS],
-            }
-        )
+        self._async_abort_entries_match({CONF_ALIAS: user_input[CONF_ALIAS]})
         self._test_data = user_input
         if user_input[CONF_IP_VERSION] == IP_VERSION_BOTH:
             return await self.async_step_dual_check()

@@ -67,17 +67,24 @@ Add the integration from the Home Assistant UI:
 
 [![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=pdns)
 
-| Field                | Description                                                                                        |
-| -------------------- | -------------------------------------------------------------------------------------------------- |
-| DNS Server           | IP address or hostname of the PowerDNS authoritative server.                                       |
-| DNS Alias            | Fully qualified name to update, e.g. `home.example.com`.                                           |
-| TSIG Key Name        | Name of the TSIG key, e.g. `home-assistant`.                                                       |
-| TSIG Key Secret      | Base64 secret of the TSIG key.                                                                     |
-| Algorithm            | TSIG algorithm: `hmac-sha256` (default), `hmac-sha512`, `hmac-sha384` or `hmac-sha224`.            |
-| TTL                  | TTL of the record, in seconds (default: `300`).                                                    |
-| IP version to update | IPv4 only (A), IPv6 only (AAAA), or IPv4 and IPv6 (A + AAAA). Default for new installations: both. |
+| Field                | Description                                                                                                                      |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| DNS Server           | Optional. IP address or hostname of the PowerDNS authoritative server. Leave empty to use the zone's primary server (see below). |
+| DNS Alias            | Fully qualified name to update, e.g. `home.example.com`.                                                                         |
+| TSIG Key Name        | Name of the TSIG key, e.g. `home-assistant`.                                                                                     |
+| TSIG Key Secret      | Base64 secret of the TSIG key.                                                                                                   |
+| Algorithm            | TSIG algorithm: `hmac-sha256` (default), `hmac-sha512`, `hmac-sha384` or `hmac-sha224`.                                          |
+| TTL                  | TTL of the record, in seconds (default: `300`).                                                                                  |
+| IP version to update | IPv4 only (A), IPv6 only (AAAA), or IPv4 and IPv6 (A + AAAA). Default for new installations: both.                               |
 
-The zone to update is **the parent of the alias**. For example, `home.example.com` is updated in the zone `example.com`. The alias must therefore sit directly under a zone hosted by the server.
+**DNS server left empty:** the primary server of the zone is used, as RFC 2136 recommends. It is the server named in the zone's SOA record (MNAME), found through the system resolver. Enter the server manually when:
+
+- the primary is hidden or not reachable from Home Assistant;
+- the SOA names a wrong or generic server;
+- you want to target a specific address, e.g. an internal one;
+- the zone is not visible in public DNS.
+
+The zone to update is **detected on the server** (SOA lookup): it is the zone hosted by the server that contains the alias. For example, `home.example.com` and `a.b.example.com` are both updated in the zone `example.com` if that is the zone the server hosts. If the server hosts no zone containing the alias, the form shows an error. A typo can still match another zone hosted by the server, so double-check the alias.
 
 A first update runs when you submit the form. The entry is created only if this update succeeds.
 
@@ -117,7 +124,10 @@ The request is made from the Home Assistant host. The IPv6 address is therefore 
 | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
 | Unable to determine public IP address                  | No Internet access, no IPv6 connectivity, or `ident.me` unreachable.                                                  |
 | Cannot connect to server or TSIG authentication failed | Wrong server, UDP 53 blocked, wrong key name/secret/algorithm, key not allowed on the zone, or source IP not allowed. |
+| The DNS server hosts no zone containing this alias     | Typo in the alias, or wrong server.                                                                                   |
 | Connection timeout                                     | Server or `ident.me` not answering within 10 seconds.                                                                 |
+
+When the server refuses an update, the log gives the DNS response code, the server address, the source address and the likely cause. Behind NAT, the source address is the local one, and the log also shows the public address the server actually sees: this is the address to allow in `allow-dnsupdate-from`.
 
 To get more details, enable debug logs:
 

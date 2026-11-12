@@ -5,7 +5,7 @@
       "user": {
         "title": "DNS Dynamic Update (TSIG)",
         "data": {
-          "pdns_server": "DNS Server (IP or hostname)",
+          "pdns_server": "DNS Server (IP or hostname, empty = zone primary server)",
           "dns_alias": "DNS Alias (FQDN, e.g. home.example.com)",
           "username": "TSIG Key Name",
           "password": "TSIG Key Secret (base64)",
@@ -37,7 +37,9 @@
       "login_incorrect": "Cannot connect to server or TSIG authentication failed.",
       "timeout": "Connection timeout.",
       "unknown": "Unknown error.",
-      "detect_failed": "Unable to determine public IP address."
+      "detect_failed": "Unable to determine public IP address.",
+      "zone_not_found": "The DNS server hosts no zone containing this alias. Check the alias and the server.",
+      "server_not_found": "Unable to find the primary server of the zone. Enter the DNS server manually."
     },
     "abort": {
       "already_configured": "[%key:common::config_flow::abort::already_configured_service%]"
@@ -74,7 +76,9 @@
       "login_incorrect": "Cannot connect to server or TSIG authentication failed.",
       "timeout": "Connection timeout.",
       "unknown": "Unknown error.",
-      "detect_failed": "Unable to determine public IP address."
+      "detect_failed": "Unable to determine public IP address.",
+      "zone_not_found": "The DNS server hosts no zone containing this alias. Check the alias and the server.",
+      "server_not_found": "Unable to find the primary server of the zone. Enter the DNS server manually."
     }
   },
   "selector": {

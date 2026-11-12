@@ -8,8 +8,8 @@ from datetime import datetime
 from typing import Any
 
 import dns.exception
+import dns.message
 import dns.name
-import dns.query
 import dns.rcode
 import dns.resolver
 import dns.tsigkeyring
@@ -22,6 +22,22 @@ MYIP_CHECK_V4 = "https://4.ident.me/"
 MYIP_CHECK_V6 = "https://6.ident.me/"
 MYIP_TIMEOUT = ClientTimeout(total=10)
 MYIP_MAX_BYTES = 64
+DNS_PORT = 53
+DNS_TIMEOUT = 10
+
+# Likely cause of a DNS update failure, by rcode
+RCODE_HINTS = {
+    dns.rcode.REFUSED: (
+        "check allow-dnsupdate-from (or ALLOW-DNSUPDATE-FROM) includes the "
+        "source address, and TSIG-ALLOW-DNSUPDATE allows the key on the zone"
+    ),
+    dns.rcode.NOTAUTH: (
+        "check the TSIG key name, secret and algorithm, and that the server "
+        "is authoritative for the zone"
+    ),
+    dns.rcode.NOTIMP: "enable dnsupdate=yes in pdns.conf",
+    dns.rcode.NOTZONE: "the alias is not in the zone",
+}
 
 # Record type -> (public IP lookup URL, address class)
 RECORD_TYPES: dict[
@@ -201,20 +217,64 @@ class PDNS:
             )
             for rdtype, ip in to_update.items():
                 update.replace(self.alias, self.ttl, rdtype, ip)
-            response = dns.query.udp(update, server_ip, timeout=10)
+            response, source_ip = self._send_update(update, server_ip)
             rcode = response.rcode()
             if rcode != dns.rcode.NOERROR:
-                raise CannotConnect(
+                message = (
                     f"DNS update of {', '.join(to_update)} for {self.alias} "
-                    f"refused by {server_ip}: {dns.rcode.to_text(rcode)}"
+                    f"refused by {server_ip} (source {source_ip}): "
+                    f"{dns.rcode.to_text(rcode)}"
                 )
+                if hint := RCODE_HINTS.get(rcode):
+                    message += f" - {hint}"
+                raise CannotConnect(message)
             return set(to_update)
-        except dns.exception.Timeout as error:
+        except (TimeoutError, dns.exception.Timeout) as error:
             raise TimeoutExpired(f"DNS update timeout for {self.alias}") from error
         except dns.exception.DNSException as error:
             raise CannotConnect(str(error)) from error
         except OSError as error:
             raise CannotConnect(str(error)) from error
+
+    @staticmethod
+    def _send_update(
+        update: dns.update.UpdateMessage, server_ip: str
+    ) -> tuple[dns.message.Message, str]:
+        """Send a TSIG-signed update over UDP and return (response, source IP).
+
+        Error responses (REFUSED, NOTAUTH...) are often not signed by the
+        server. They are accepted only to report the rcode: an unsigned
+        success is never trusted.
+        """
+        family = (
+            socket.AF_INET6
+            if ipaddress.ip_address(server_ip).version == 6
+            else socket.AF_INET
+        )
+        wire = update.to_wire()
+        with socket.socket(family, socket.SOCK_DGRAM) as sock:
+            sock.settimeout(DNS_TIMEOUT)
+            # Connected UDP socket: only datagrams from the server are received
+            sock.connect((server_ip, DNS_PORT))
+            sock.send(wire)
+            source_ip = str(sock.getsockname()[0])
+            while True:
+                data = sock.recv(65535)
+                try:
+                    response = dns.message.from_wire(
+                        data, keyring=update.keyring, request_mac=update.mac
+                    )
+                except dns.exception.FormError:
+                    unsigned = dns.message.from_wire(data, keyring=False)
+                    if not update.is_response(unsigned):
+                        continue
+                    if unsigned.rcode() == dns.rcode.NOERROR:
+                        raise CannotConnect(
+                            f"Unsigned success response from {server_ip}, ignored"
+                        ) from None
+                    return unsigned, source_ip
+                if update.is_response(response):
+                    return response, source_ip
 
 
 class PDNSFailed(Exception):

@@ -12,12 +12,14 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 from .const import (
     CONF_ALIAS,
+    CONF_IP_VERSION,
     CONF_PDNSSRV,
     CONF_TSIG_ALGORITHM,
     CONF_TTL,
     DEFAULT_ALGORITHM,
     DEFAULT_TTL,
     DOMAIN,
+    LEGACY_IP_VERSION,
     TSIG_ALGORITHMS,
 )
 from .pdns import PDNS, PDNSFailed
@@ -43,6 +45,9 @@ class PDNSDataUpdateCoordinator(DataUpdateCoordinator):
             algorithm=entry.data.get(CONF_TSIG_ALGORITHM, DEFAULT_ALGORITHM),
             ttl=entry.data.get(CONF_TTL, DEFAULT_TTL),
             session=async_get_clientsession(hass),
+            ip_version=entry.options.get(
+                CONF_IP_VERSION, entry.data.get(CONF_IP_VERSION, LEGACY_IP_VERSION)
+            ),
         )
         if self.api.algorithm not in TSIG_ALGORITHMS:
             _LOGGER.warning(

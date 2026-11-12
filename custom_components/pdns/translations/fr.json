@@ -10,7 +10,25 @@
           "username": "Nom de la clé TSIG",
           "password": "Secret de la clé TSIG (base64)",
           "tsig_algorithm": "Algorithme",
-          "ttl": "TTL (secondes)"
+          "ttl": "TTL (secondes)",
+          "ip_version": "Version IP à mettre à jour"
+        }
+      },
+      "dual_success": {
+        "title": "Mise à jour IPv4 et IPv6",
+        "description": "Première mise à jour effectuée pour les deux adresses :\n\n- IPv4 : {ipv4_status}\n- IPv6 : {ipv6_status}",
+        "menu_options": {
+          "confirm_dual": "Valider IPv4 et IPv6",
+          "back": "Revenir"
+        }
+      },
+      "dual_partial": {
+        "title": "Mise à jour IPv4 et IPv6",
+        "description": "Une des deux adresses n'a pas pu être détectée, aucune mise à jour n'a été faite :\n\n- IPv4 : {ipv4_status}\n- IPv6 : {ipv6_status}\n\nVous pouvez mettre à jour uniquement l'adresse qui fonctionne, ou revenir en arrière.",
+        "menu_options": {
+          "use_ipv4": "Mettre à jour uniquement l'IPv4",
+          "use_ipv6": "Mettre à jour uniquement l'IPv6",
+          "back": "Revenir"
         }
       }
     },
@@ -23,6 +41,49 @@
     },
     "abort": {
       "already_configured": "Service déjà configuré"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Options",
+        "data": {
+          "ip_version": "Version IP à mettre à jour"
+        }
+      },
+      "dual_success": {
+        "title": "Mise à jour IPv4 et IPv6",
+        "description": "Première mise à jour effectuée pour les deux adresses :\n\n- IPv4 : {ipv4_status}\n- IPv6 : {ipv6_status}",
+        "menu_options": {
+          "confirm_dual": "Valider IPv4 et IPv6",
+          "back": "Revenir"
+        }
+      },
+      "dual_partial": {
+        "title": "Mise à jour IPv4 et IPv6",
+        "description": "Une des deux adresses n'a pas pu être détectée, aucune mise à jour n'a été faite :\n\n- IPv4 : {ipv4_status}\n- IPv6 : {ipv6_status}\n\nVous pouvez mettre à jour uniquement l'adresse qui fonctionne, ou revenir en arrière.",
+        "menu_options": {
+          "use_ipv4": "Mettre à jour uniquement l'IPv4",
+          "use_ipv6": "Mettre à jour uniquement l'IPv6",
+          "back": "Revenir"
+        }
+      }
+    },
+    "error": {
+      "update_failed": "Mise à jour en erreur.",
+      "login_incorrect": "Impossible de se connecter ou authentification TSIG échouée.",
+      "timeout": "Timeout dépassé.",
+      "unknown": "Erreur inconnue.",
+      "detect_failed": "Impossible de déterminer l'adresse IP publique."
+    }
+  },
+  "selector": {
+    "ip_version": {
+      "options": {
+        "ipv4": "IPv4 uniquement (enregistrement A)",
+        "ipv6": "IPv6 uniquement (enregistrement AAAA)",
+        "both": "IPv4 et IPv6 (enregistrements A + AAAA)"
+      }
     }
   }
 }

@@ -5,7 +5,7 @@
       "user": {
         "title": "Mise à jour DNS dynamique (TSIG)",
         "data": {
-          "pdns_server": "Serveur DNS (IP ou nom d'hôte)",
+          "pdns_server": "Serveur DNS (IP ou nom d'hôte, vide = serveur primaire de la zone)",
           "dns_alias": "Alias DNS (FQDN, ex. home.example.com)",
           "username": "Nom de la clé TSIG",
           "password": "Secret de la clé TSIG (base64)",
@@ -38,7 +38,8 @@
       "timeout": "Timeout dépassé.",
       "unknown": "Erreur inconnue.",
       "detect_failed": "Impossible de déterminer l'adresse IP publique.",
-      "zone_not_found": "Le serveur DNS n'héberge aucune zone contenant cet alias. Vérifiez l'alias et le serveur."
+      "zone_not_found": "Le serveur DNS n'héberge aucune zone contenant cet alias. Vérifiez l'alias et le serveur.",
+      "server_not_found": "Impossible de trouver le serveur primaire de la zone. Saisissez le serveur DNS."
     },
     "abort": {
       "already_configured": "Service déjà configuré"
@@ -76,7 +77,8 @@
       "timeout": "Timeout dépassé.",
       "unknown": "Erreur inconnue.",
       "detect_failed": "Impossible de déterminer l'adresse IP publique.",
-      "zone_not_found": "Le serveur DNS n'héberge aucune zone contenant cet alias. Vérifiez l'alias et le serveur."
+      "zone_not_found": "Le serveur DNS n'héberge aucune zone contenant cet alias. Vérifiez l'alias et le serveur.",
+      "server_not_found": "Impossible de trouver le serveur primaire de la zone. Saisissez le serveur DNS."
     }
   },
   "selector": {

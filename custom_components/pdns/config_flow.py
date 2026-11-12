@@ -91,13 +91,16 @@ async def async_validate_update(
     """Run a DNS update with the given settings and return form errors."""
     try:
         await _build_client(hass, data, ip_version).async_update()
-    except CannotConnect:
-        return {"base": "login_incorrect"}
-    except TimeoutExpired:
-        return {"base": "timeout"}
-    except DetectionFailed:
-        return {"base": "detect_failed"}
-    except PDNSFailed:
+    except PDNSFailed as error:
+        _LOGGER.warning(
+            "Validation of %s (%s) failed: %s", data[CONF_ALIAS], ip_version, error
+        )
+        if isinstance(error, CannotConnect):
+            return {"base": "login_incorrect"}
+        if isinstance(error, TimeoutExpired):
+            return {"base": "timeout"}
+        if isinstance(error, DetectionFailed):
+            return {"base": "detect_failed"}
         return {"base": "update_failed"}
     return {}
 

@@ -61,4 +61,4 @@ class PDNSDataUpdateCoordinator(DataUpdateCoordinator):
         try:
             return await self.api.async_update()
         except PDNSFailed as error:
-            raise UpdateFailed from error
+            raise UpdateFailed(str(error)) from error

@@ -155,6 +155,15 @@ class DualStackCheckMixin:
             description_placeholders=placeholders,
         )
 
+    # Home Assistant requires a step method for each shown step_id
+    async def async_step_dual_success(self, user_input=None) -> ConfigFlowResult:
+        """Status menu when both families work (re-runs the check)."""
+        return await self.async_step_dual_check()
+
+    async def async_step_dual_partial(self, user_input=None) -> ConfigFlowResult:
+        """Status menu when one family fails (re-runs the check)."""
+        return await self.async_step_dual_check()
+
     async def async_step_confirm_dual(self, user_input=None) -> ConfigFlowResult:
         """Keep IPv4 + IPv6."""
         return self._async_finish(IP_VERSION_BOTH)

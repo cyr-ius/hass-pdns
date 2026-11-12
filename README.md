@@ -77,7 +77,7 @@ Add the integration from the Home Assistant UI:
 | TTL                  | TTL of the record, in seconds (default: `300`).                                                    |
 | IP version to update | IPv4 only (A), IPv6 only (AAAA), or IPv4 and IPv6 (A + AAAA). Default for new installations: both. |
 
-The zone to update is **the parent of the alias**. For example, `home.example.com` is updated in the zone `example.com`. The alias must therefore sit directly under a zone hosted by the server.
+The zone to update is **detected on the server** (SOA lookup): it is the zone hosted by the server that contains the alias. For example, `home.example.com` and `a.b.example.com` are both updated in the zone `example.com` if that is the zone the server hosts. If the server hosts no zone containing the alias, the form shows an error. A typo can still match another zone hosted by the server, so double-check the alias.
 
 A first update runs when you submit the form. The entry is created only if this update succeeds.
 
@@ -117,7 +117,10 @@ The request is made from the Home Assistant host. The IPv6 address is therefore 
 | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
 | Unable to determine public IP address                  | No Internet access, no IPv6 connectivity, or `ident.me` unreachable.                                                  |
 | Cannot connect to server or TSIG authentication failed | Wrong server, UDP 53 blocked, wrong key name/secret/algorithm, key not allowed on the zone, or source IP not allowed. |
+| The DNS server hosts no zone containing this alias     | Typo in the alias, or wrong server.                                                                                   |
 | Connection timeout                                     | Server or `ident.me` not answering within 10 seconds.                                                                 |
+
+When the server refuses an update, the log gives the DNS response code, the server address, the source address and the likely cause. Behind NAT, the source address is the local one, and the log also shows the public address the server actually sees: this is the address to allow in `allow-dnsupdate-from`.
 
 To get more details, enable debug logs:
 

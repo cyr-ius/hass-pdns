@@ -38,7 +38,14 @@ from .const import (
     LEGACY_IP_VERSION,
     TSIG_ALGORITHMS,
 )
-from .pdns import PDNS, CannotConnect, DetectionFailed, PDNSFailed, TimeoutExpired
+from .pdns import (
+    PDNS,
+    CannotConnect,
+    DetectionFailed,
+    PDNSFailed,
+    TimeoutExpired,
+    ZoneNotFound,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -95,6 +102,8 @@ async def async_validate_update(
         _LOGGER.warning(
             "Validation of %s (%s) failed: %s", data[CONF_ALIAS], ip_version, error
         )
+        if isinstance(error, ZoneNotFound):
+            return {"base": "zone_not_found"}
         if isinstance(error, CannotConnect):
             return {"base": "login_incorrect"}
         if isinstance(error, TimeoutExpired):

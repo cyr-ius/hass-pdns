@@ -37,7 +37,8 @@
       "login_incorrect": "Impossible de se connecter ou authentification TSIG échouée.",
       "timeout": "Timeout dépassé.",
       "unknown": "Erreur inconnue.",
-      "detect_failed": "Impossible de déterminer l'adresse IP publique."
+      "detect_failed": "Impossible de déterminer l'adresse IP publique.",
+      "zone_not_found": "Le serveur DNS n'héberge aucune zone contenant cet alias. Vérifiez l'alias et le serveur."
     },
     "abort": {
       "already_configured": "Service déjà configuré"
@@ -74,7 +75,8 @@
       "login_incorrect": "Impossible de se connecter ou authentification TSIG échouée.",
       "timeout": "Timeout dépassé.",
       "unknown": "Erreur inconnue.",
-      "detect_failed": "Impossible de déterminer l'adresse IP publique."
+      "detect_failed": "Impossible de déterminer l'adresse IP publique.",
+      "zone_not_found": "Le serveur DNS n'héberge aucune zone contenant cet alias. Vérifiez l'alias et le serveur."
     }
   },
   "selector": {

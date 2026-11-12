@@ -37,7 +37,8 @@
       "login_incorrect": "Cannot connect to server or TSIG authentication failed.",
       "timeout": "Connection timeout.",
       "unknown": "Unknown error.",
-      "detect_failed": "Unable to determine public IP address."
+      "detect_failed": "Unable to determine public IP address.",
+      "zone_not_found": "The DNS server hosts no zone containing this alias. Check the alias and the server."
     },
     "abort": {
       "already_configured": "[%key:common::config_flow::abort::already_configured_service%]"
@@ -74,7 +75,8 @@
       "login_incorrect": "Cannot connect to server or TSIG authentication failed.",
       "timeout": "Connection timeout.",
       "unknown": "Unknown error.",
-      "detect_failed": "Unable to determine public IP address."
+      "detect_failed": "Unable to determine public IP address.",
+      "zone_not_found": "The DNS server hosts no zone containing this alias. Check the alias and the server."
     }
   },
   "selector": {

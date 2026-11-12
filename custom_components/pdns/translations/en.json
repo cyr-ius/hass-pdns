@@ -10,7 +10,25 @@
           "username": "TSIG Key Name",
           "password": "TSIG Key Secret (base64)",
           "tsig_algorithm": "Algorithm",
-          "ttl": "TTL (seconds)"
+          "ttl": "TTL (seconds)",
+          "ip_version": "IP version to update"
+        }
+      },
+      "dual_success": {
+        "title": "IPv4 and IPv6 update",
+        "description": "First update completed for both addresses:\n\n- IPv4: {ipv4_status}\n- IPv6: {ipv6_status}",
+        "menu_options": {
+          "confirm_dual": "Confirm IPv4 and IPv6",
+          "back": "Back"
+        }
+      },
+      "dual_partial": {
+        "title": "IPv4 and IPv6 update",
+        "description": "One of the two addresses could not be detected, nothing was updated:\n\n- IPv4: {ipv4_status}\n- IPv6: {ipv6_status}\n\nYou can update only the address that works, or go back.",
+        "menu_options": {
+          "use_ipv4": "Update IPv4 only",
+          "use_ipv6": "Update IPv6 only",
+          "back": "Back"
         }
       }
     },
@@ -23,6 +41,49 @@
     },
     "abort": {
       "already_configured": "Service is already configured"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Options",
+        "data": {
+          "ip_version": "IP version to update"
+        }
+      },
+      "dual_success": {
+        "title": "IPv4 and IPv6 update",
+        "description": "First update completed for both addresses:\n\n- IPv4: {ipv4_status}\n- IPv6: {ipv6_status}",
+        "menu_options": {
+          "confirm_dual": "Confirm IPv4 and IPv6",
+          "back": "Back"
+        }
+      },
+      "dual_partial": {
+        "title": "IPv4 and IPv6 update",
+        "description": "One of the two addresses could not be detected, nothing was updated:\n\n- IPv4: {ipv4_status}\n- IPv6: {ipv6_status}\n\nYou can update only the address that works, or go back.",
+        "menu_options": {
+          "use_ipv4": "Update IPv4 only",
+          "use_ipv6": "Update IPv6 only",
+          "back": "Back"
+        }
+      }
+    },
+    "error": {
+      "update_failed": "Update failed.",
+      "login_incorrect": "Cannot connect to server or TSIG authentication failed.",
+      "timeout": "Connection timeout.",
+      "unknown": "Unknown error.",
+      "detect_failed": "Unable to determine public IP address."
+    }
+  },
+  "selector": {
+    "ip_version": {
+      "options": {
+        "ipv4": "IPv4 only (A record)",
+        "ipv6": "IPv6 only (AAAA record)",
+        "both": "IPv4 and IPv6 (A + AAAA records)"
+      }
     }
   }
 }
